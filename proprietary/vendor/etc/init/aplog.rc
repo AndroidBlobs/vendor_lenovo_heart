@@ -1,0 +1,143 @@
+on post-fs-data
+    # add aplog dir
+    mkdir /data/vendor 0751 system system
+    mkdir /data/vendor/newlog 0777 system system
+    mkdir /data/vendor/newlog/aplog 0777 system system
+    mkdir /data/vendor/newlog/aplog/logcats 0777 system system
+    mkdir /data/vendor/newlog/aplog/bluetooth 0777 system system
+    mkdir /data/vendor/newlog/aplog/tcps 0777 system system
+    # mkdir /data/vendor/newlog/aplog/dumpsys 0777 system system
+    mkdir /data/vendor/newlog/curlog 0777 system system
+    mkdir /data/vendor/newlog/curlog/dumpsys 0777 system system
+    mkdir /persist/flag 0770 system system
+    # for modem log
+    chmod 666 /dev/diag
+    # for ap wakeup source log
+    write /sys/module/msm_show_resume_irq/parameters/debug_mask 1
+    chmod 777 /sys/module/msm_poweroff/parameters/download_mode
+
+on property:persist.vendor.dloadmode.config=1
+    write /sys/module/qpnp_power_on/parameters/emergent_restart 1
+    write /sys/module/msm_poweroff/parameters/download_mode 1
+    write /sys/module/qpnp_power_on/parameters/dload_on_debug 1
+    write /sys/kernel/dload/emmc_dload 0
+    setprop persist.vendor.ssr.restart_level ALL_DISABLE
+
+on property:persist.vendor.dloadmode.config=0
+    write /sys/module/qpnp_power_on/parameters/emergent_restart 0
+    write /sys/module/msm_poweroff/parameters/download_mode 1
+    write /sys/module/qpnp_power_on/parameters/dload_on_debug 0
+    write /sys/kernel/dload/emmc_dload 1
+    setprop persist.vendor.ssr.restart_level ALL_ENABLE
+
+#add for aplog service
+service mainlog /vendor/bin/vendor_logcat -b main -b system -b crash -r 4096 -n 20 -v threadtime -f /data/vendor/newlog/aplog/logcats/mainlog
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+# add for record more logcat info
+service mainlog_big /vendor/bin/vendor_logcat -b main -b system -b crash -r 4096 -n 500 -v threadtime -f /data/vendor/newlog/aplog/logcats/mainlog
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+service radiolog /vendor/bin/vendor_logcat -b radio -r 2048 -n 10 -v threadtime -f /data/vendor/newlog/aplog/logcats/radio "AT:S *:V"
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+# add for record more logcat info
+service radiolog_big /vendor/bin/vendor_logcat -b radio -r 2048 -n 500 -v threadtime -f /data/vendor/newlog/aplog/logcats/radio "AT:S *:V"
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+service eventslog /vendor/bin/vendor_logcat -b events -r 4096 -n 10 -v threadtime -f /data/vendor/newlog/aplog/logcats/events "AT:S *:V"
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+service eventslog_big /vendor/bin/vendor_logcat -b events -r 4096 -n 500 -v threadtime -f /data/vendor/newlog/aplog/logcats/events "AT:S *:V"
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+# add by wangwq14 to close chatty in logcat
+service closechatty /vendor/bin/vendor_logcat -P "" -b all
+    class main
+    user system
+    group system root log
+    disabled
+    oneshot
+
+# add for record kernel log via dmesg
+service kernellog /vendor/bin/kernellog.sh
+    class main
+    disabled
+    oneshot
+
+#service qseelog /vendor/bin/qseelog.sh
+#    class main
+#    disabled
+#    oneshot
+
+service batterylog /vendor/bin/batterylogcontrol.sh
+    class main
+    disabled
+    oneshot
+
+service aplog_setup /vendor/bin/aplog.sh
+    class late_start
+    user system
+    group system root log
+    oneshot
+
+service copyaplog /vendor/bin/copy_aplog.sh
+    class main
+    disabled
+    oneshot
+
+service cleanaplog /vendor/bin/clean_aplog.sh
+    class main
+    disabled
+    oneshot
+
+# Add by wangwq14 for stop all log services, remove *.enable and old logs.
+service stopaplog /vendor/bin/stop_aplog.sh
+    class main
+    disabled
+    oneshot
+
+# Add by wangwq14 for catch current log service
+service catchaplog /vendor/bin/catch_aplog.sh
+    class main
+    disabled
+    oneshot
+
+# Add by wangwq14
+service assalog /vendor/bin/auto_save_stop_aplog.sh
+    class main
+    disabled
+    oneshot
+
+service modemlog /vendor/bin/modemlog.sh
+    class main
+    disabled
+    oneshot
+
+service modemlog_setup /vendor/bin/modemlog_setup.sh
+    class late_start
+    oneshot
